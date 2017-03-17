@@ -1,0 +1,114 @@
+<?xml version="1.0" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.atlassian.pom</groupId>
+        <artifactId>base-pom</artifactId>
+        <version>3.0.98</version>
+        <relativePath>../base-pom</relativePath>
+    </parent>
+
+    <artifactId>central-pom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Atlassian Central POM</name>
+
+    <distributionManagement>
+        <repository>
+            <id>atlassian-central</id>
+            <name>Atlassian Central Repository</name>
+            <url>https://maven.atlassian.com/central-staging</url>
+        </repository>
+        <snapshotRepository>
+            <id>atlassian-central-snapshot</id>
+            <name>Atlassian Central Repository Snapshots</name>
+            <url>https://maven.atlassian.com/central-snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <issueManagement>
+        <system>JIRA</system>
+        <url>http://jira.atlassian.com/browse/APUBPOM</url>
+    </issueManagement>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+        </plugins>
+    </reporting>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <!-- Consumers of central-pom should not use the Atlassian fork of nexus-staging-maven-plugin - BUILDENG-8564 -->
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>${nexus.staging.plugin.baseVersion}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <!-- deployments without crypto signatures, sources, and javadoc will be rejected -->
+            <!-- use the 'release' profile to generate and include these in the deployment -->
+            <id>release</id>
+            <build>
+                <plugins>
+                    <!-- this plugin is required to ensure Central Repository's requirements are met -->
+                    <!-- https://docs.sonatype.org/display/Repository/Central+Sync+Requirements -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-source-plugin</artifactId>
+                    </plugin>
+                    <!-- javadoc generation found in base-bom when using 'release' profile -->
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>releaseParents</id>
+            <!-- Only use the Atlassian fork of nexus-staging-maven-plugin when releasing the parent POMs - BUILDENG-8564
+                 This profile must be activated when releasing the parent-poms project.
+             -->
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.sonatype.plugins</groupId>
+                            <artifactId>nexus-staging-maven-plugin</artifactId>
+                            <version>${nexus.staging.plugin.baseVersion}${nexus.staging.plugin.fork}</version>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>uk.ac.bris.cs</groupId>
+  <artifactId>fxkit</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <versioning>
+    <latest>0.0.1-SNAPSHOT</latest>
+    <release>0.0.1-SNAPSHOT</release>
+    <versions>
+      <version>0.0.1-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20170315225657</lastUpdated>
+  </versioning>
+</metadata>

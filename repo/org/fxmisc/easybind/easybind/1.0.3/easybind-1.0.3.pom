@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.fxmisc.easybind</groupId>
+  <artifactId>easybind</artifactId>
+  <version>1.0.3</version>
+  <name>EasyBind</name>
+  <description>Factory methods for easy creation of JavaFX bindings using lambdas.</description>
+  <url>http://www.fxmisc.org/easybind/</url>
+  <licenses>
+    <license>
+      <name>The BSD 2-Clause License</name>
+      <url>http://opensource.org/licenses/BSD-2-Clause</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Tomas Mikula</name>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git@github.com:TomasMikula/EasyBind.git</connection>
+    <developerConnection>scm:git@github.com:TomasMikula/EasyBind.git</developerConnection>
+    <url>scm:git@github.com:TomasMikula/EasyBind.git</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>[4.0,)</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

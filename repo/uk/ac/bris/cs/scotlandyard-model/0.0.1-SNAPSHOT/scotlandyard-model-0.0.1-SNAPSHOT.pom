@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>scotlandyard</artifactId>
+        <groupId>uk.ac.bris.cs</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>scotlandyard-model</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>uk.ac.bris.cs</groupId>
+            <artifactId>scotlandyard-api</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>uk.ac.bris.cs</groupId>
+            <artifactId>gamekit</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.1.11</version>
+            </plugin>
+            <plugin>
+                <groupId>com.github.wvengen</groupId>
+                <artifactId>proguard-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>proguard</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <options>
+                        <option>-optimizationpasses 6</option>
+                        <!--Bytecode allows more flexible overloading,
+                        this makes decompiled code invalid as fields
+                        are likely to share the same name-->
+                        <option>-overloadaggressively</option>
+                        <option>-allowaccessmodification</option>
+                        <option>-keepattributes Exceptions,InnerClasses,Signature,*Annotation*</option>
+                        <!--Keep the constructor so package private reference still works-->
+                        <option>
+                            -keep public class * {
+                            public &lt;init&gt;(...);
+                            }
+                        </option>
+                        <option>-keep public class
+                            uk.ac.bris.cs.scotlandyard.model.ScotlandYardModel{
+                            public &lt;init&gt;(...);
+                            }
+                        </option>
+                        <option>-keep public class
+                            uk.ac.bris.cs.scotlandyard.model.RemoteScotlandYardModel{
+                            public &lt;init&gt;(...);
+                            public &lt;methods&gt;;
+                            }
+                        </option>
+                        <option>-keep public class
+                            uk.ac.bris.cs.scotlandyard.model.FunctionalScotlandYardModel{
+                            public &lt;init&gt;(...);
+                            }
+                        </option>
+                    </options>
+                    <libs>
+                        <lib>${java.home}/lib/rt.jar</lib>
+                    </libs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
