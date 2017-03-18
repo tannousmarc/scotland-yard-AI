@@ -1,10 +1,5 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
-import java.util.ArrayList;
-import java.util.Random;
-import java.util.Set;
-import java.util.function.Consumer;
-
 import uk.ac.bris.cs.scotlandyard.ai.ManagedAI;
 import uk.ac.bris.cs.scotlandyard.ai.PlayerFactory;
 import uk.ac.bris.cs.scotlandyard.model.Colour;
@@ -12,8 +7,13 @@ import uk.ac.bris.cs.scotlandyard.model.Move;
 import uk.ac.bris.cs.scotlandyard.model.Player;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYardView;
 
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Set;
+import java.util.function.Consumer;
+
 // TODO name the AI
-@ManagedAI("Name me!")
+@ManagedAI("Elodia")
 public class MyAI implements PlayerFactory {
 
 	// TODO create a new player here
