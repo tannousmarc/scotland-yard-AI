@@ -281,16 +281,32 @@ public class MyAI implements PlayerFactory {
 
 		}
 		private final int DijkstraDistance (ScotlandYardView view, int source, int destination){
-			// Noi n-ar trebui sa facem pe graf cu edge-uri si node-uri
-			// ci pe graf cu move-uri si node-uri. ???
+
 			//Collection<Edge<Integer, Transport>> edges = view.getGraph().getEdgesFrom(view.getGraph().getNode(source));
 			//System.out.println("Avem muchiile : " + edges);
+			// PUTEM COPIA EXACT ALGORITMUL DE PE SITE SI FACEM SUS WEIGHT = SUMA AIA DE DISTANCETUPLE SI MERGE FARA SCHIMBARI
 			// TODO : DE FACUT TEST PT DIJKSTRA
 			List<dijkstraVertex> nodes = new ArrayList<dijkstraVertex>();
 			List<dijkstraEdge> edges = new ArrayList<dijkstraEdge>();
-					dijkstraVertex location = new dijkstraVertex("Node_01" , "Node_01");
-					nodes.add(location);
-					//edges.add()
+			dijkstraVertex unu = new dijkstraVertex("Node1" , "Node1");
+			dijkstraVertex doi = new dijkstraVertex("Node2" , "Node2");
+			dijkstraVertex trei = new dijkstraVertex("Node3" , "Node3");
+			dijkstraVertex patru = new dijkstraVertex("Node4" , "Node4");
+			nodes.add(doi);
+			nodes.add(trei);
+			nodes.add(patru);
+			edges.add(new dijkstraEdge("Edge1", unu, doi, new distanceTuple(1,0,0,0)));
+			edges.add(new dijkstraEdge("Edge2", unu, patru, new distanceTuple(0,0,1,0)));
+			edges.add(new dijkstraEdge("Edge3", unu, trei, new distanceTuple(1,0,0,0)));
+			edges.add(new dijkstraEdge("Edge4", doi, patru, new distanceTuple(0,1,0,0)));
+			edges.add(new dijkstraEdge("Edge5", trei, patru, new distanceTuple(0,0,1,0)));
+			dijkstraGraph g = new dijkstraGraph(nodes,edges);
+			DijkstraAlgorithm dijkstra = new DijkstraAlgorithm(g);
+			dijkstra.execute(unu);
+			LinkedList<dijkstraVertex> path = dijkstra.getPath(patru);
+			for (dijkstraVertex vertex : path) {
+				System.out.println(vertex);
+			}
 			return 0;
 		}
 		private final Random random = new Random();
