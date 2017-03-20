@@ -1,10 +1,14 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
-import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra;
 import uk.ac.bris.cs.gamekit.graph.Edge;
+import uk.ac.bris.cs.gamekit.graph.Node;
 import uk.ac.bris.cs.scotlandyard.ai.ManagedAI;
 import uk.ac.bris.cs.scotlandyard.ai.PlayerFactory;
 import uk.ac.bris.cs.scotlandyard.model.*;
+import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraAlgorithm;
+import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraEdge;
+import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraGraph;
+import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraVertex;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -18,7 +22,7 @@ public class MyAI implements PlayerFactory {
 
 	// TODO create a new player here
 	/*@Override
-	public Graph<Integer, Transport> Graph;
+	public DijkstraGraph<Integer, Transport> DijkstraGraph;
 	*/
 	public Player createPlayer(Colour colour) {
 		return new MyPlayer();
@@ -27,28 +31,39 @@ public class MyAI implements PlayerFactory {
 	// TODO A sample player that selects a random move
 	private static class MyPlayer implements Player {
 
+		public int edgeToWeight(Object e){
+			switch (e.toString()){
+				case "Bus": return 15;
+				case "Taxi": return 10;
+				case "Underground": return 30;
+			}
+			return 100000;
+		}
 		private final int DijkstraDistance (ScotlandYardView view, int source, int destination){
-			// Collection<Edge<Integer, Transport>> Edges = view.getGraph().getEdgesFrom(view.getGraph().getNode(source));
+			Collection<Edge<Integer, Transport>> initialEdges = view.getGraph().getEdges();
+			List<Node<Integer>> initialNodes = view.getGraph().getNodes();
+			//System.out.println(initialEdges);
 			// PUTEM COPIA EXACT ALGORITMUL DE PE SITE SI FACEM SUS WEIGHT = SUMA AIA DE DISTANCETUPLE SI MERGE FARA SCHIMBARI
 			// TODO : DE FACUT TEST PT DIJKSTRA
-			List<Dijkstra.Vertex> nodes = new ArrayList<>();
-			List<Dijkstra.Edge> edges = new ArrayList<>();
-			for (int i = 0; i < 4; i++) {
-				nodes.add(new Dijkstra().new Vertex("Node_" + i, "Node_" + i));
+			List<DijkstraVertex> nodes = new ArrayList<>();
+			List<DijkstraEdge> edges = new ArrayList<>();
+			for (Node n : initialNodes) {
+				nodes.add(new DijkstraVertex(n.value().toString(), n.value().toString()));
 			}
-			System.out.println("Created nodes : " + nodes);
-			edges.add(new Dijkstra().new Edge("Edge1", nodes.get(0), nodes.get(3), new Dijkstra().EdgeToWeight("Underground")));
-			edges.add(new Dijkstra().new Edge("Edge2", nodes.get(0), nodes.get(1), new Dijkstra().EdgeToWeight("Taxi")));
-			edges.add(new Dijkstra().new Edge("Edge3", nodes.get(0), nodes.get(2), new Dijkstra().EdgeToWeight("Taxi")));
-			edges.add(new Dijkstra().new Edge("Edge1", nodes.get(1), nodes.get(3), new Dijkstra().EdgeToWeight("Bus")));
-			edges.add(new Dijkstra().new Edge("Edge1", nodes.get(2), nodes.get(3), new Dijkstra().EdgeToWeight("Taxi")));
-			Dijkstra.Graph graph = new Dijkstra().new Graph(nodes, edges);
-			Dijkstra.DijkstraAlgorithm dijkstra = new Dijkstra().new DijkstraAlgorithm(graph);
-			dijkstra.execute(nodes.get(0));
-			LinkedList<Dijkstra.Vertex> path = dijkstra.getPath(nodes.get(3));
-			for (Dijkstra.Vertex vertex : path) {
-				System.out.println("Drum : " + 	vertex);
+			Integer aux = 0;
+			for(Edge e : initialEdges){
+				edges.add(new DijkstraEdge(aux.toString(),nodes.get((int)e.source().value()-1),nodes.get((int)e.destination().value()-1) , edgeToWeight(e.data())));
+				aux++;
 			}
+			DijkstraGraph graph = new DijkstraGraph(nodes, edges);
+			DijkstraAlgorithm algorithm = new DijkstraAlgorithm(graph);
+			algorithm.execute(nodes.get(0));
+			LinkedList<DijkstraVertex> path = algorithm.getPath(nodes.get(174));
+			if(path!=null)
+				for (DijkstraVertex v : path) {
+					System.out.println("Drum : " + 	v);
+				}
+
 			return 0;
 		}
 		private final Random random = new Random();
