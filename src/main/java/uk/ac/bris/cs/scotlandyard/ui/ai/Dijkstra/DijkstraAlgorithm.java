@@ -12,7 +12,7 @@ public class DijkstraAlgorithm {
     private Set<DijkstraVertex> settledNodes;
     private Set<DijkstraVertex> unSettledNodes;
     private Map<DijkstraVertex, DijkstraVertex> predecessors;
-    private Map<DijkstraVertex, Integer> distance;
+    public Map<DijkstraVertex, Integer> distance;
 
     public DijkstraAlgorithm(DijkstraGraph DijkstraGraph) {
         // create a copy of the array so that we can operate on this array
@@ -21,7 +21,9 @@ public class DijkstraAlgorithm {
 
     }
 
-
+    public Map<DijkstraVertex, Integer> getDistances(){
+        return distance;
+    }
     public void execute(DijkstraVertex source) {
         settledNodes = new HashSet<DijkstraVertex>();
         unSettledNodes = new HashSet<DijkstraVertex>();
