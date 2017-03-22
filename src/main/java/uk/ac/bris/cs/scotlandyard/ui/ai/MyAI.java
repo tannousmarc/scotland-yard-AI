@@ -78,13 +78,19 @@ public class MyAI implements PlayerFactory {
 		// gets # of available moves from a location. 0 means that location's stuck
 		private int getNumberOfMoves(ScotlandYardView view, int location){
 			int sum = 0;
+			List<Integer> visited = new ArrayList<>();
 			for(Edge e : view.getGraph().getEdgesFrom(new Node<>(location))) {
 				boolean occupied = false;
 				for(Colour detective : view.getPlayers()){
 					if(detective.isDetective())
 						if(view.getPlayerLocation(detective) == (int)e.destination().value()) occupied = true;
 				}
-				if(!occupied) sum++;
+				if(!occupied){
+						if(!visited.contains(e.destination().value())) {
+							visited.add((int) e.destination().value());
+							sum++;
+						}
+				}
 			}
 			return sum;
 		}
@@ -95,29 +101,39 @@ public class MyAI implements PlayerFactory {
 		@Override
 		public void makeMove(ScotlandYardView view, int location, Set<Move> moves,
 				Consumer<Move> callback) {
+			maxScore = -9999;
 			// Calculate scores for all possible next moves Mr.X can make
 			// Pick the best one
 			// Add distance to detectives to score
 			globalView = view;
+			System.out.println("MR.X is at location : " + location);
+
+
 			for(Move move : moves)
 				move.visit(this);
-			System.out.println(bestMove);
+			System.out.println("Selected move : " + bestMove);
 			callback.accept(bestMove);
-
 		}
 		@Override
 		public void visit(TicketMove t){
-			if(!t.ticket().equals(Ticket.Secret))
-				if(getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination()) > maxScore){
-					maxScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
-					bestMove = t;
-				}
+			int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
+			if(t.ticket().equals(Ticket.Secret)) currentScore-=24;
+			System.out.println("By using TicketMove " + t + "score = " + currentScore);
+			if(currentScore > maxScore){
+				maxScore =currentScore;
+				bestMove = t;
+			}
 		}
 		@Override
 		public void visit(DoubleMove d){
 			// -60 because using a doubleMove ticket is not optimal
-			if(getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination()) - 60 > maxScore){
-				maxScore = getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination())-60;
+			int currentScore = getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination()) - 60;
+			// -24 for each secret move
+			if(d.firstMove().ticket().equals(Ticket.Secret)) currentScore-=24;
+			if(d.secondMove().ticket().equals(Ticket.Secret)) currentScore-=24;
+			System.out.println("By using DoubleMove " + d +  "score = " + currentScore);
+			if( currentScore> maxScore){
+				maxScore = currentScore;
 				bestMove = d;
 			}
 		}
