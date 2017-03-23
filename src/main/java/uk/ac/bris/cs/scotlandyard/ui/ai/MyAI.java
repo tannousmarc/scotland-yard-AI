@@ -18,9 +18,16 @@ import java.util.function.Consumer;
 
 public class MyAI implements PlayerFactory {
 
-	static int maxScore = 0;
+	static int maxScore;
+	static int detectiveMaxScore;
 	static ScotlandYardView globalView;
 	static Move bestMove;
+	static List<DijkstraVertex> nodes = new ArrayList<>();
+	static List<DijkstraEdge> edges = new ArrayList<>();
+	static DijkstraGraph graph;
+	static DijkstraAlgorithm dijkstraAlgorithm;
+	static int potentialLocation;
+	static int deficit;
 	// TODO create a new player here
 	/*@Override
 	public DijkstraGraph<Integer, Transport> DijkstraGraph;
@@ -40,13 +47,12 @@ public class MyAI implements PlayerFactory {
 			}
 			return 100000;
 		}
-		private final int DijkstraDistance (ScotlandYardView view, int source, int destination){
+		private void initiateDijkstra(ScotlandYardView view){
 			// All edges of our graph
 			Collection<Edge<Integer, Transport>> initialEdges = view.getGraph().getEdges();
 			// All nodes of our graph
 			List<Node<Integer>> initialNodes = view.getGraph().getNodes();
-			List<DijkstraVertex> nodes = new ArrayList<>();
-			List<DijkstraEdge> edges = new ArrayList<>();
+
 			// Initiate a graph to apply the dijkstra algorithm on
 			for (Node n : initialNodes) {
 				nodes.add(new DijkstraVertex(n.value().toString(), n.value().toString()));
@@ -56,14 +62,20 @@ public class MyAI implements PlayerFactory {
 				edges.add(new DijkstraEdge(aux.toString(),nodes.get((int)e.source().value()-1),nodes.get((int)e.destination().value()-1) , edgeToWeight(e.data())));
 				aux++;
 			}
-			DijkstraGraph graph = new DijkstraGraph(nodes, edges);
-			DijkstraAlgorithm algorithm = new DijkstraAlgorithm(graph);
-
-			algorithm.execute(nodes.get(source-1));
-			return algorithm.getDistances().get(nodes.get(destination-1));
+			graph = new DijkstraGraph(nodes, edges);
+			dijkstraAlgorithm = new DijkstraAlgorithm(graph);
+		}
+		private final int DijkstraDistance (ScotlandYardView view, int source, int destination){
+			dijkstraAlgorithm.execute(nodes.get(source-1));
+			return dijkstraAlgorithm.getDistances().get(nodes.get(destination-1));
+		}
+		private final int getNextDetectiveMove(ScotlandYardView view, int source, int destination){
+			dijkstraAlgorithm.execute(nodes.get(source-1));
+			return Integer.parseInt(dijkstraAlgorithm.getPath(nodes.get(destination-1)).get(1).toString());
 		}
 		private int getDetectiveDistance(ScotlandYardView view, int location){
 			int sum = 0;
+
 			for(Colour detective : view.getPlayers()){
 				if(detective.isDetective()) {
 					int distance = DijkstraDistance(view, location, view.getPlayerLocation(detective));
@@ -74,6 +86,9 @@ public class MyAI implements PlayerFactory {
 				}
 			}
 			return sum;
+		}
+		private int getSpecificDetectiveDistance(ScotlandYardView view, int location, Colour detective){
+			return DijkstraDistance(view, location, view.getPlayerLocation(detective));
 		}
 		// gets # of available moves from a location. 0 means that location's stuck
 		private int getNumberOfMoves(ScotlandYardView view, int location){
@@ -101,41 +116,73 @@ public class MyAI implements PlayerFactory {
 		@Override
 		public void makeMove(ScotlandYardView view, int location, Set<Move> moves,
 				Consumer<Move> callback) {
-			maxScore = -9999;
+			maxScore = Integer.MIN_VALUE;
+			detectiveMaxScore = Integer.MAX_VALUE;
 			// Calculate scores for all possible next moves Mr.X can make
 			// Pick the best one
 			// Add distance to detectives to score
 			globalView = view;
 			System.out.println("MR.X is at location : " + location);
-
-
-			for(Move move : moves)
+			// For each of Mr.X's potential moves, calculate the optimal detective play
+			// Then choose the Mr.X move which has the least powerful detective play
+			initiateDijkstra(view);
+			for(Move move : moves) {
+				System.out.println("Evaluating move "+ move + "...");
+				deficit = 0;
 				move.visit(this);
-			System.out.println("Selected move : " + bestMove);
+				int currentDistanceSum = deficit;
+				for(Colour player : view.getPlayers()){
+					if(player.isDetective()) {
+						int toEvaluate = DijkstraDistance(view, getNextDetectiveMove(view, view.getPlayerLocation(player), potentialLocation), potentialLocation);
+						if (toEvaluate == 10 || toEvaluate == 15 || toEvaluate == 30)
+							// If detective can catch within one move, detective has a very good move
+							toEvaluate -= 300;
+						currentDistanceSum += toEvaluate;
+					}
+				}
+				System.out.println("For move " + move + ", detectives have " + currentDistanceSum + "points");
+				if(currentDistanceSum < detectiveMaxScore){
+					System.out.println("CURRENT DETECTIVE MOVE HAS SCORE "+currentDistanceSum+" BEST DETECTIVE MOVE SO FAR HAS SCORE "+detectiveMaxScore+"BEST MR.X MOVE SO FAR HAS SCORE "+maxScore);
+					detectiveMaxScore = currentDistanceSum;
+					if(detectiveMaxScore > maxScore){
+						maxScore = detectiveMaxScore;
+						bestMove = move;
+					}
+				}
+
+			}
+			System.out.println("Selected move : " + bestMove + "with a detective score of"+ maxScore);
 			callback.accept(bestMove);
 		}
 		@Override
 		public void visit(TicketMove t){
-			int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
+			if(t.ticket().equals(Ticket.Secret)) deficit-=24;
+			potentialLocation = t.destination();
+	/*		int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
 			if(t.ticket().equals(Ticket.Secret)) currentScore-=24;
-			System.out.println("By using TicketMove " + t + "score = " + currentScore);
+			//System.out.println("Evaluating move " + t + "with score " + currentScore);
 			if(currentScore > maxScore){
 				maxScore =currentScore;
 				bestMove = t;
 			}
+			*/
 		}
 		@Override
 		public void visit(DoubleMove d){
-			// -60 because using a doubleMove ticket is not optimal
+			deficit-=60;
+			if(d.firstMove().equals(Ticket.Secret)) deficit-=24;
+			if(d.secondMove().equals(Ticket.Secret)) deficit-=24;
+			potentialLocation = d.finalDestination();
+			/*// -60 because using a doubleMove ticket is not optimal
 			int currentScore = getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination()) - 60;
 			// -24 for each secret move
 			if(d.firstMove().ticket().equals(Ticket.Secret)) currentScore-=24;
 			if(d.secondMove().ticket().equals(Ticket.Secret)) currentScore-=24;
-			System.out.println("By using DoubleMove " + d +  "score = " + currentScore);
+			//System.out.println("Evaluating move " + d + "with score " + currentScore);
 			if( currentScore> maxScore){
 				maxScore = currentScore;
 				bestMove = d;
-			}
+			}*/
 		}
 	}
 }
