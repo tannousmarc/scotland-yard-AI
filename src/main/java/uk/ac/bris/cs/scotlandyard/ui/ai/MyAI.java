@@ -17,7 +17,8 @@ import java.util.function.Consumer;
 @ManagedAI("Elodia")
 
 public class MyAI implements PlayerFactory {
-
+	// TODO : Singleton, Flyweight, Recursive Minimax (Mini calls Max, Max calls Mini, stop function), Pruning
+	// TODO : Documentation (javadoc?)
 	static int maxScore;
 	static int detectiveMaxScore;
 	static ScotlandYardView globalView;
