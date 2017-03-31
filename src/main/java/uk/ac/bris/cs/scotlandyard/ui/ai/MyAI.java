@@ -10,7 +10,10 @@ import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraEdge;
 import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraGraph;
 import uk.ac.bris.cs.scotlandyard.ui.ai.Dijkstra.DijkstraVertex;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 // TODO name the AI
@@ -19,7 +22,8 @@ import java.util.function.Consumer;
 public class MyAI implements PlayerFactory {
 	// TODO : Singleton, Flyweight, Recursive Minimax (Mini calls Max, Max calls Mini, stop function), Pruning
 	// TODO : Documentation (javadoc?)
-	static int maxScore;
+	static int currentScore;
+	static int mrXMaxScore;
 	static int detectiveMaxScore;
 	static ScotlandYardView globalView;
 	static Move bestMove;
@@ -29,6 +33,7 @@ public class MyAI implements PlayerFactory {
 	static DijkstraAlgorithm dijkstraAlgorithm;
 	static int potentialLocation;
 	static int deficit;
+	static List<Ticket> ticketsUsed = new ArrayList<>();
 	// TODO create a new player here
 	/*@Override
 	public DijkstraGraph<Integer, Transport> DijkstraGraph;
@@ -66,11 +71,12 @@ public class MyAI implements PlayerFactory {
 			graph = new DijkstraGraph(nodes, edges);
 			dijkstraAlgorithm = new DijkstraAlgorithm(graph);
 		}
-		private final int DijkstraDistance (ScotlandYardView view, int source, int destination){
+		private final int DijkstraDistance (int source, int destination){
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return dijkstraAlgorithm.getDistances().get(nodes.get(destination-1));
 		}
-		private final int getNextDetectiveMove(ScotlandYardView view, int source, int destination){
+		private final int getNextDetectiveMove( int source, int destination){
+			if(source==destination) return 0;
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return Integer.parseInt(dijkstraAlgorithm.getPath(nodes.get(destination-1)).get(1).toString());
 		}
@@ -79,7 +85,7 @@ public class MyAI implements PlayerFactory {
 
 			for(Colour detective : view.getPlayers()){
 				if(detective.isDetective()) {
-					int distance = DijkstraDistance(view, location, view.getPlayerLocation(detective));
+					int distance = DijkstraDistance(location, view.getPlayerLocation(detective));
 					// If a detective is on top of our next move, completely disregard this move
 					if (distance == 0)
 						return -10000;
@@ -87,9 +93,6 @@ public class MyAI implements PlayerFactory {
 				}
 			}
 			return sum;
-		}
-		private int getSpecificDetectiveDistance(ScotlandYardView view, int location, Colour detective){
-			return DijkstraDistance(view, location, view.getPlayerLocation(detective));
 		}
 		// gets # of available moves from a location. 0 means that location's stuck
 		private int getNumberOfMoves(ScotlandYardView view, int location){
@@ -110,15 +113,98 @@ public class MyAI implements PlayerFactory {
 			}
 			return sum;
 		}
-		private final Random random = new Random();
-		private void setView(ScotlandYardView view){
-			globalView = view;
+
+		private int mrxScore(ScotlandYardView view, int deficit){
+			int potentialMoves = getNumberOfMoves(view, view.getPlayerLocation(Colour.Black));
+			int detectiveDistances = getDetectiveDistance(view, view.getPlayerLocation(Colour.Black));
+			//System.out.println("Best move : "+bestMove+"Mr.X Position : "+view.getPlayerLocation(Colour.Black)+"Move score : "+potentialMoves+ " Distance score: "+detectiveDistances+" Deficit: "+deficit);
+			return potentialMoves*potentialMoves + detectiveDistances + deficit;
+		}
+		private int detectiveScore(ScotlandYardView view){
+			int sum=0;
+			for(Colour player : view.getPlayers()) {
+				if(player.isDetective()) {
+					int toEvaluate = DijkstraDistance(view.getPlayerLocation(player), potentialLocation);
+					if (toEvaluate == 10 || toEvaluate == 15 || toEvaluate == 30)
+						// If detective can catch within one move, detective has a very good move
+						toEvaluate -= 300;
+					sum += toEvaluate;
+				}
+			}
+			return sum;
+		}
+		private int minimax(boolean isMrXTurn, int depth, ScotlandYardView view, Set<Move> moves, int alpha, int beta, int deficitTotal) {
+			// Breaking condition of our recursive function
+			if (depth <= 0) {
+				System.out.println("Alpha : "+alpha+"Beta: "+beta);
+				return mrxScore(view, deficitTotal);
+			}
+			else {
+				if (isMrXTurn) {
+					for (Move move : moves) {
+						deficit = 0;
+						ticketsUsed.clear();
+						move.visit(this);
+						NewScotlandYardView newView = new NewScotlandYardView(view);
+						newView.setPlayerLocation(Colour.Black, potentialLocation);
+						for(Ticket t: ticketsUsed)
+							newView.removeTicket(Colour.Black, t);
+						currentScore = minimax(false, depth -1, newView, newView.validMoves(Colour.Black), alpha, beta, deficit+deficitTotal);
+						System.out.println("We have propagated upwards a score of "+currentScore+" alpha is "+alpha+ ", beta is:" + beta +" move is "+move);
+						if (currentScore > alpha) {
+							alpha = currentScore;
+							bestMove = move;
+						}
+						// Beta cut-off
+						if(beta<=alpha) break;
+						//System.out.println("Alpha : "+alpha+"Depth : "+depth+"Current score : "+currentScore);
+					}
+					return alpha;
+				}
+				// Detective turn TODO : Write in report about how good this pruning is
+				else {
+
+					NewScotlandYardView newView = new NewScotlandYardView(view);
+					for(Colour player : view.getPlayers()){
+						if(player.isDetective()){
+							int nextMove= getNextDetectiveMove(view.getPlayerLocation(player), potentialLocation);
+							newView.setPlayerLocation(player, nextMove);
+							switch(nextMove){
+								case 10 : {
+									newView.removeTicket(player, Ticket.Taxi);
+									newView.addTicket(Colour.Black, Ticket.Taxi);
+									break;
+								}
+								case 15 : {
+									newView.removeTicket(player, Ticket.Bus);
+									newView.addTicket(Colour.Black, Ticket.Bus);
+									break;
+								}
+								case 30 : {
+									newView.removeTicket(player, Ticket.Underground);
+									newView.addTicket(Colour.Black, Ticket.Underground);
+									break;
+								}
+							}
+
+						}
+					}
+					//System.out.println("Valid moves of Mr.X : " + newView.validMoves(Colour.Black));
+					int toEvaluate = detectiveScore(newView);
+					if(toEvaluate<beta) beta=toEvaluate;
+					currentScore = minimax(true, depth -1, newView, newView.validMoves(Colour.Black), alpha, beta, deficitTotal);
+
+					// No Alpha cut-off because we have already pruned moves by directly picking the best one
+					return currentScore;
+				}
+			}
 		}
 		@Override
 		public void makeMove(ScotlandYardView view, int location, Set<Move> moves,
 				Consumer<Move> callback) {
-			maxScore = Integer.MIN_VALUE;
-			detectiveMaxScore = Integer.MAX_VALUE;
+			initiateDijkstra(view);
+			currentScore = 0;
+			minimax(true, 3, view, moves, Integer.MIN_VALUE, Integer.MAX_VALUE,0);
 			// Calculate scores for all possible next moves Mr.X can make
 			// Pick the best one
 			// Add distance to detectives to score
@@ -126,37 +212,13 @@ public class MyAI implements PlayerFactory {
 			System.out.println("MR.X is at location : " + location);
 			// For each of Mr.X's potential moves, calculate the optimal detective play
 			// Then choose the Mr.X move which has the least powerful detective play
-			initiateDijkstra(view);
-			for(Move move : moves) {
-				System.out.println("Evaluating move "+ move + "...");
-				deficit = 0;
-				move.visit(this);
-				int currentDistanceSum = deficit;
-				for(Colour player : view.getPlayers()){
-					if(player.isDetective()) {
-						int toEvaluate = DijkstraDistance(view, getNextDetectiveMove(view, view.getPlayerLocation(player), potentialLocation), potentialLocation);
-						if (toEvaluate == 10 || toEvaluate == 15 || toEvaluate == 30)
-							// If detective can catch within one move, detective has a very good move
-							toEvaluate -= 300;
-						currentDistanceSum += toEvaluate;
-					}
-				}
-				System.out.println("For move " + move + ", detectives have " + currentDistanceSum + "points");
-				if(currentDistanceSum < detectiveMaxScore){
-					System.out.println("CURRENT DETECTIVE MOVE HAS SCORE "+currentDistanceSum+" BEST DETECTIVE MOVE SO FAR HAS SCORE "+detectiveMaxScore+"BEST MR.X MOVE SO FAR HAS SCORE "+maxScore);
-					detectiveMaxScore = currentDistanceSum;
-					if(detectiveMaxScore > maxScore){
-						maxScore = detectiveMaxScore;
-						bestMove = move;
-					}
-				}
 
-			}
-			System.out.println("Selected move : " + bestMove + "with a detective score of"+ maxScore);
+			System.out.println("Selected move : " + bestMove);
 			callback.accept(bestMove);
 		}
 		@Override
 		public void visit(TicketMove t){
+			ticketsUsed.add(t.ticket());
 			if(t.ticket().equals(Ticket.Secret)) deficit-=24;
 			potentialLocation = t.destination();
 	/*		int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
@@ -170,6 +232,9 @@ public class MyAI implements PlayerFactory {
 		}
 		@Override
 		public void visit(DoubleMove d){
+			ticketsUsed.add(Ticket.Double);
+			ticketsUsed.add(d.firstMove().ticket());
+			ticketsUsed.add(d.secondMove().ticket());
 			deficit-=60;
 			if(d.firstMove().equals(Ticket.Secret)) deficit-=24;
 			if(d.secondMove().equals(Ticket.Secret)) deficit-=24;
