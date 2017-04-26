@@ -34,6 +34,8 @@ public class MyAI implements PlayerFactory {
 	static int potentialLocation;
 	static int deficit;
 	static List<Ticket> ticketsUsed = new ArrayList<>();
+	static long startTime ;
+	static long estimatedTime;
 	// TODO create a new player here
 	/*@Override
 	public DijkstraGraph<Integer, Transport> DijkstraGraph;
@@ -72,11 +74,12 @@ public class MyAI implements PlayerFactory {
 			dijkstraAlgorithm = new DijkstraAlgorithm(graph);
 		}
 		private final int DijkstraDistance (int source, int destination){
+			// System.out.println(source + " " + destination);
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return dijkstraAlgorithm.getDistances().get(nodes.get(destination-1));
 		}
-		private final int getNextDetectiveMove( int source, int destination){
-			if(source==destination) return 0;
+		private final int getNextDetectiveMove(int source, int destination){
+			if(source==destination) return source;
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return Integer.parseInt(dijkstraAlgorithm.getPath(nodes.get(destination-1)).get(1).toString());
 		}
@@ -117,6 +120,11 @@ public class MyAI implements PlayerFactory {
 		private int mrxScore(ScotlandYardView view, int deficit){
 			int potentialMoves = getNumberOfMoves(view, view.getPlayerLocation(Colour.Black));
 			int detectiveDistances = getDetectiveDistance(view, view.getPlayerLocation(Colour.Black));
+			System.out.println(detectiveDistances);
+			// if deficit <= -200, we have surely made a secret move. Reward it if detectives are close (very good move)
+			if(deficit<=-1800 && detectiveDistances<50) {
+				System.out.println("acum");deficit+=2600;
+			}
 			//System.out.println("Best move : "+bestMove+"Mr.X Position : "+view.getPlayerLocation(Colour.Black)+"Move score : "+potentialMoves+ " Distance score: "+detectiveDistances+" Deficit: "+deficit);
 			return potentialMoves*potentialMoves + detectiveDistances + deficit;
 		}
@@ -124,10 +132,12 @@ public class MyAI implements PlayerFactory {
 			int sum=0;
 			for(Colour player : view.getPlayers()) {
 				if(player.isDetective()) {
+					//System.out.println("aici");
 					int toEvaluate = DijkstraDistance(view.getPlayerLocation(player), potentialLocation);
+					//System.out.println("Acolo");
 					if (toEvaluate == 10 || toEvaluate == 15 || toEvaluate == 30)
 						// If detective can catch within one move, detective has a very good move
-						toEvaluate -= 300;
+						toEvaluate -= 400;
 					sum += toEvaluate;
 				}
 			}
@@ -135,12 +145,17 @@ public class MyAI implements PlayerFactory {
 		}
 		private int minimax(boolean isMrXTurn, int depth, ScotlandYardView view, Set<Move> moves, int alpha, int beta, int deficitTotal) {
 			// Breaking condition of our recursive function
+
+			if(System.nanoTime()-startTime>55000000000L) return 0;
 			if (depth <= 0) {
-				System.out.println("Alpha : "+alpha+"Beta: "+beta);
+				//.out.println("Alpha : "+alpha+"Beta: "+beta);
 				return mrxScore(view, deficitTotal);
 			}
 			else {
 				if (isMrXTurn) {
+					estimatedTime = System.nanoTime() - startTime;
+
+
 					for (Move move : moves) {
 						deficit = 0;
 						ticketsUsed.clear();
@@ -149,9 +164,12 @@ public class MyAI implements PlayerFactory {
 						newView.setPlayerLocation(Colour.Black, potentialLocation);
 						for(Ticket t: ticketsUsed)
 							newView.removeTicket(Colour.Black, t);
+						if(estimatedTime>55000000000L)
+							return 0;
 						currentScore = minimax(false, depth -1, newView, newView.validMoves(Colour.Black), alpha, beta, deficit+deficitTotal);
-						System.out.println("We have propagated upwards a score of "+currentScore+" alpha is "+alpha+ ", beta is:" + beta +" move is "+move);
+						//System.out.println("We have propagated upwards a score of "+currentScore+" alpha is "+alpha+ ", beta is:" + beta +" move is "+move);
 						if (currentScore > alpha) {
+
 							alpha = currentScore;
 							bestMove = move;
 						}
@@ -159,15 +177,18 @@ public class MyAI implements PlayerFactory {
 						if(beta<=alpha) break;
 						//System.out.println("Alpha : "+alpha+"Depth : "+depth+"Current score : "+currentScore);
 					}
+
 					return alpha;
 				}
 				// Detective turn TODO : Write in report about how good this pruning is
 				else {
-
+					estimatedTime = System.nanoTime() - startTime;
 					NewScotlandYardView newView = new NewScotlandYardView(view);
 					for(Colour player : view.getPlayers()){
 						if(player.isDetective()){
 							int nextMove= getNextDetectiveMove(view.getPlayerLocation(player), potentialLocation);
+
+							//System.out.println("Ceva e futut : " + nextMove+"numarul detectivului: "+player+"potentialLocation: "+potentialLocation);
 							newView.setPlayerLocation(player, nextMove);
 							switch(nextMove){
 								case 10 : {
@@ -192,9 +213,12 @@ public class MyAI implements PlayerFactory {
 					//System.out.println("Valid moves of Mr.X : " + newView.validMoves(Colour.Black));
 					int toEvaluate = detectiveScore(newView);
 					if(toEvaluate<beta) beta=toEvaluate;
+					if(estimatedTime>55000000000L)
+						return 0;
 					currentScore = minimax(true, depth -1, newView, newView.validMoves(Colour.Black), alpha, beta, deficitTotal);
 
 					// No Alpha cut-off because we have already pruned moves by directly picking the best one
+
 					return currentScore;
 				}
 			}
@@ -204,22 +228,25 @@ public class MyAI implements PlayerFactory {
 				Consumer<Move> callback) {
 			initiateDijkstra(view);
 			currentScore = 0;
+			startTime =  System.nanoTime();
 			minimax(true, 3, view, moves, Integer.MIN_VALUE, Integer.MAX_VALUE,0);
 			// Calculate scores for all possible next moves Mr.X can make
 			// Pick the best one
 			// Add distance to detectives to score
 			globalView = view;
-			System.out.println("MR.X is at location : " + location);
+			//System.out.println("MR.X is at location : " + location);
 			// For each of Mr.X's potential moves, calculate the optimal detective play
 			// Then choose the Mr.X move which has the least powerful detective play
 
-			System.out.println("Selected move : " + bestMove);
+			//
+			 System.out.println("Selected move : " + bestMove);
+
 			callback.accept(bestMove);
 		}
 		@Override
 		public void visit(TicketMove t){
 			ticketsUsed.add(t.ticket());
-			if(t.ticket().equals(Ticket.Secret)) deficit-=24;
+			if(t.ticket().equals(Ticket.Secret)) deficit-=2000;
 			potentialLocation = t.destination();
 	/*		int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
 			if(t.ticket().equals(Ticket.Secret)) currentScore-=24;
@@ -235,9 +262,9 @@ public class MyAI implements PlayerFactory {
 			ticketsUsed.add(Ticket.Double);
 			ticketsUsed.add(d.firstMove().ticket());
 			ticketsUsed.add(d.secondMove().ticket());
-			deficit-=60;
-			if(d.firstMove().equals(Ticket.Secret)) deficit-=24;
-			if(d.secondMove().equals(Ticket.Secret)) deficit-=24;
+			deficit-=120;
+			if(d.firstMove().equals(Ticket.Secret)) deficit-=2000;
+			if(d.secondMove().equals(Ticket.Secret)) deficit-=2000;
 			potentialLocation = d.finalDestination();
 			/*// -60 because using a doubleMove ticket is not optimal
 			int currentScore = getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination()) - 60;
