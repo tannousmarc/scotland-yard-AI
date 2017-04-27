@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 // TODO name the AI
-@ManagedAI("Elodia")
+@ManagedAI("MrX.AI")
 
 public class MyAI implements PlayerFactory {
 	// TODO : Singleton, Flyweight, Recursive Minimax (Mini calls Max, Max calls Mini, stop function), Pruning
@@ -27,8 +27,8 @@ public class MyAI implements PlayerFactory {
 	static int detectiveMaxScore;
 	static ScotlandYardView globalView;
 	static Move bestMove;
-	static List<DijkstraVertex> nodes = new ArrayList<>();
-	static List<DijkstraEdge> edges = new ArrayList<>();
+	private static List<DijkstraVertex> nodes = new ArrayList<>();
+	private static List<DijkstraEdge> edges = new ArrayList<>();
 	static DijkstraGraph graph;
 	static DijkstraAlgorithm dijkstraAlgorithm;
 	static int potentialLocation;
@@ -36,6 +36,7 @@ public class MyAI implements PlayerFactory {
 	static List<Ticket> ticketsUsed = new ArrayList<>();
 	static long startTime ;
 	static long estimatedTime;
+	static int usedSecrets;
 	// TODO create a new player here
 	/*@Override
 	public DijkstraGraph<Integer, Transport> DijkstraGraph;
@@ -47,7 +48,7 @@ public class MyAI implements PlayerFactory {
 	// TODO A sample player that selects a random move
 	private static class MyPlayer implements Player, MoveVisitor {
 
-		public int edgeToWeight(Object e){
+		private int edgeToWeight(Object e){
 			switch (e.toString()){
 				case "Bus": return 15;
 				case "Taxi": return 10;
@@ -73,12 +74,12 @@ public class MyAI implements PlayerFactory {
 			graph = new DijkstraGraph(nodes, edges);
 			dijkstraAlgorithm = new DijkstraAlgorithm(graph);
 		}
-		private final int DijkstraDistance (int source, int destination){
+		private int DijkstraDistance (int source, int destination){
 			// System.out.println(source + " " + destination);
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return dijkstraAlgorithm.getDistances().get(nodes.get(destination-1));
 		}
-		private final int getNextDetectiveMove(int source, int destination){
+		private int getNextDetectiveMove(int source, int destination){
 			if(source==destination) return source;
 			dijkstraAlgorithm.execute(nodes.get(source-1));
 			return Integer.parseInt(dijkstraAlgorithm.getPath(nodes.get(destination-1)).get(1).toString());
@@ -91,7 +92,7 @@ public class MyAI implements PlayerFactory {
 					int distance = DijkstraDistance(location, view.getPlayerLocation(detective));
 					// If a detective is on top of our next move, completely disregard this move
 					if (distance == 0)
-						return -10000;
+						return -15000;
 					sum+=distance;
 				}
 			}
@@ -108,7 +109,7 @@ public class MyAI implements PlayerFactory {
 						if(view.getPlayerLocation(detective) == (int)e.destination().value()) occupied = true;
 				}
 				if(!occupied){
-						if(!visited.contains(e.destination().value())) {
+						if(!visited.contains((Integer)e.destination().value())) {
 							visited.add((int) e.destination().value());
 							sum++;
 						}
@@ -117,16 +118,19 @@ public class MyAI implements PlayerFactory {
 			return sum;
 		}
 
-		private int mrxScore(ScotlandYardView view, int deficit){
+		private int mrxScore(ScotlandYardView view, int deficit, int usedSecrets){
 			int potentialMoves = getNumberOfMoves(view, view.getPlayerLocation(Colour.Black));
 			int detectiveDistances = getDetectiveDistance(view, view.getPlayerLocation(Colour.Black));
-			System.out.println(detectiveDistances);
-			// if deficit <= -200, we have surely made a secret move. Reward it if detectives are close (very good move)
-			if(deficit<=-1800 && detectiveDistances<50) {
-				System.out.println("acum");deficit+=2600;
+			//System.out.println(detectiveDistances);
+
+
+			if(detectiveDistances<150 && usedSecrets > 0) {
+				//System.out.println("acum");
+				return 2*potentialMoves*potentialMoves + detectiveDistances + 700;
 			}
+
 			//System.out.println("Best move : "+bestMove+"Mr.X Position : "+view.getPlayerLocation(Colour.Black)+"Move score : "+potentialMoves+ " Distance score: "+detectiveDistances+" Deficit: "+deficit);
-			return potentialMoves*potentialMoves + detectiveDistances + deficit;
+			return 2*potentialMoves*potentialMoves + detectiveDistances + deficit;
 		}
 		private int detectiveScore(ScotlandYardView view){
 			int sum=0;
@@ -137,7 +141,7 @@ public class MyAI implements PlayerFactory {
 					//System.out.println("Acolo");
 					if (toEvaluate == 10 || toEvaluate == 15 || toEvaluate == 30)
 						// If detective can catch within one move, detective has a very good move
-						toEvaluate -= 400;
+						toEvaluate -= 10000;
 					sum += toEvaluate;
 				}
 			}
@@ -149,7 +153,7 @@ public class MyAI implements PlayerFactory {
 			if(System.nanoTime()-startTime>55000000000L) return 0;
 			if (depth <= 0) {
 				//.out.println("Alpha : "+alpha+"Beta: "+beta);
-				return mrxScore(view, deficitTotal);
+				return mrxScore(view, deficitTotal, usedSecrets);
 			}
 			else {
 				if (isMrXTurn) {
@@ -158,6 +162,7 @@ public class MyAI implements PlayerFactory {
 
 					for (Move move : moves) {
 						deficit = 0;
+						usedSecrets = 0;
 						ticketsUsed.clear();
 						move.visit(this);
 						NewScotlandYardView newView = new NewScotlandYardView(view);
@@ -212,9 +217,10 @@ public class MyAI implements PlayerFactory {
 					}
 					//System.out.println("Valid moves of Mr.X : " + newView.validMoves(Colour.Black));
 					int toEvaluate = detectiveScore(newView);
-					if(toEvaluate<beta) beta=toEvaluate;
+					if(toEvaluate<beta) beta = toEvaluate;
 					if(estimatedTime>55000000000L)
 						return 0;
+					System.out.println("Alpha : " + alpha + ", beta : " + beta);
 					currentScore = minimax(true, depth -1, newView, newView.validMoves(Colour.Black), alpha, beta, deficitTotal);
 
 					// No Alpha cut-off because we have already pruned moves by directly picking the best one
@@ -229,53 +235,39 @@ public class MyAI implements PlayerFactory {
 			initiateDijkstra(view);
 			currentScore = 0;
 			startTime =  System.nanoTime();
+			usedSecrets = 0;
 			minimax(true, 3, view, moves, Integer.MIN_VALUE, Integer.MAX_VALUE,0);
 			// Calculate scores for all possible next moves Mr.X can make
 			// Pick the best one
 			// Add distance to detectives to score
 			globalView = view;
-			//System.out.println("MR.X is at location : " + location);
+
+
 			// For each of Mr.X's potential moves, calculate the optimal detective play
 			// Then choose the Mr.X move which has the least powerful detective play
 
-			//
-			 System.out.println("Selected move : " + bestMove);
+			 //System.out.println("Selected move : " + bestMove);
 
 			callback.accept(bestMove);
 		}
 		@Override
 		public void visit(TicketMove t){
 			ticketsUsed.add(t.ticket());
-			if(t.ticket().equals(Ticket.Secret)) deficit-=2000;
+			if(t.ticket().equals(Ticket.Secret)) {deficit-=300; usedSecrets++;}
 			potentialLocation = t.destination();
-	/*		int currentScore = getDetectiveDistance(globalView, t.destination())+15*getNumberOfMoves(globalView, t.destination());
-			if(t.ticket().equals(Ticket.Secret)) currentScore-=24;
-			//System.out.println("Evaluating move " + t + "with score " + currentScore);
-			if(currentScore > maxScore){
-				maxScore =currentScore;
-				bestMove = t;
-			}
-			*/
 		}
+
 		@Override
 		public void visit(DoubleMove d){
 			ticketsUsed.add(Ticket.Double);
 			ticketsUsed.add(d.firstMove().ticket());
 			ticketsUsed.add(d.secondMove().ticket());
-			deficit-=120;
-			if(d.firstMove().equals(Ticket.Secret)) deficit-=2000;
-			if(d.secondMove().equals(Ticket.Secret)) deficit-=2000;
+			deficit-=150;
+
+			if(d.firstMove().equals(Ticket.Secret)) {deficit -= 300; usedSecrets++;}
+			if(d.secondMove().equals(Ticket.Secret)) {deficit-= 300; usedSecrets++;}
 			potentialLocation = d.finalDestination();
-			/*// -60 because using a doubleMove ticket is not optimal
-			int currentScore = getDetectiveDistance(globalView, d.finalDestination())+15*getNumberOfMoves(globalView, d.finalDestination()) - 60;
-			// -24 for each secret move
-			if(d.firstMove().ticket().equals(Ticket.Secret)) currentScore-=24;
-			if(d.secondMove().ticket().equals(Ticket.Secret)) currentScore-=24;
-			//System.out.println("Evaluating move " + d + "with score " + currentScore);
-			if( currentScore> maxScore){
-				maxScore = currentScore;
-				bestMove = d;
-			}*/
+
 		}
 	}
 }
