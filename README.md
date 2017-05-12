@@ -5,5 +5,5 @@ The game is based on graph theory : players can freely move around nodes on weig
 
 # Solution
 - For graph traversal, we've looked at Dijkstra's algorithm/A star/Lookup table, each one with their pros and cons : our concerns were performance and how well the AI behaves.
-- For decision making, a recursive minimax algorithm with variable depth was the obvious choice. The scoring function is a (carefully weighted?) polynomial function that takes into account distance to opponents, possible escape routes and "dead states". 
+- For decision making, a recursive minimax algorithm with variable depth was the obvious choice. The scoring of game states is done by a (carefully weighted?) polynomial function that takes into account distance to opponents, possible escape routes and "dead states". 
 - Performance-wise, minimax (going to depths >3) will take a LONG time. In order to speed this up, we're using alpha-beta pruning.
