@@ -1,5 +1,5 @@
 # About
-Scotland Yard is a board game popular in Europe. First step was implementing the logic in Java, then coming up with AIs for the two sides, detectives and Mr.X
+Scotland Yard is a board game popular in Europe. First step was implementing the actual game logic in Java, then coming up with AIs for the two sides, detectives and Mr.X
 
 The game is based on graph theory : players can freely move around nodes on weighted edges, have a limited number of tickets, Mr.X's location is periodically revealed.
 
